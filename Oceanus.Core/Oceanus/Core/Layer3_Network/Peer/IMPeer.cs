@@ -21,16 +21,6 @@ namespace Oceanus.Core.Network
         void Start(string loginUrl);
         void Start(string host, int port, string token);
         void Stop();
-        void RegisterIMMessageObserver<T>(string contentType, IMMessageObserver<T> messageObserver);
-        void UnRegisterIMMessageObserver<T>(string contentType, IMMessageObserver<T> messageObserver);
-        void UnRegisterIMMessageObserver<T>(string contentType);
-
-        void RegisterIMDataObserver<T>(string contentType, IMDataObserver<T> dataObserver);
-        void UnRegisterIMDataObserver<T>(string contentType, IMDataObserver<T> dataObserver);
-        void UnRegisterIMDataObserver<T>(string contentType);
-
-        //void RegisterPeerConnectedDelegate(OnPeerConnected onPeerConnectedMethod);
-        //void RegisterPeerDisconnectedDelegate(OnPeerDisconnected onPeerDisconnectedMethod);
         /**
          * <summary>
          * If channel is disconnected, send failed will be return immediately. 
@@ -43,15 +33,6 @@ namespace Oceanus.Core.Network
          * <param name="sendTimeoutSeconds">send timeout seconds, only available when channel is connected</param>
          */
         void Send(object content, string contentType, OnIMResultReceived onIMResultReceivedMethod = null, int sendTimeoutSeconds = 0);
-    }
-    public interface IMMessageObserver<T>
-    {
-        void OnReceived(T content, string contentType, string id, string userId, string groupId, long time);
-    }
-
-    public interface IMDataObserver<T>
-    {
-        void OnReceived(T content, string contentType, string id, long time);
     }
     public class IMPeerBuilder
     {

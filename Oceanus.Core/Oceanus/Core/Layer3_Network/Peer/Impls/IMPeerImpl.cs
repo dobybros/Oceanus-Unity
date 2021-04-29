@@ -8,7 +8,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Oceanus.Core.Network
@@ -28,10 +30,8 @@ namespace Oceanus.Core.Network
         public static readonly int STATUS_DISCONNECTED = 100;
         public static readonly int STATUS_DESTROYED = 1000;
         internal AtomicInt mStatus;
-
-
-        //private OnPeerConnected mOnPeerConnectedMethod;
-        //private OnPeerDisconnected mOnPeerDisconnectedMethod;
+        internal AtomicInt retryCounter;
+        protected object mLock = new object();
 
         public event OnPeerConnected OnPeerConnectedEvents;
         public event OnPeerDisconnected OnPeerDisconnectedEvents;
@@ -43,46 +43,81 @@ namespace Oceanus.Core.Network
         {
             mUserId = userId;
             mStatus = new AtomicInt(STATUS_NONE);
+            retryCounter = new AtomicInt(-1);
             //IncomingInvocation incomingInvocation = new global::IncomingInvocation();
         }
 
-        public string test()
+        private void startThread()
         {
-            //WebRequest a;
-            //WebSocketServer w;
-            //CancellationTokenSource a;
-            IncomingInvocation incomingInvocation = new IncomingInvocation();
-            incomingInvocation.Service = "my service";
-            incomingInvocation.Class = "my class";
-            incomingInvocation.Method = "method1";
-
-            MemoryStream stream = new MemoryStream();
-            incomingInvocation.WriteTo(stream);
-            byte[] newData = incomingInvocation.ToByteArray();
-            byte[] data = stream.ToArray();
-
-            IncomingInvocation newIncomingInvocation = IncomingInvocation.Parser.ParseFrom(data);
-            Hashtable map = new Hashtable();
-            map.Add("a", "b");
-
-            string json = JsonMapper.ToJson(map);
-            return json;
+            ThreadStart threadStart = new ThreadStart(run);
+            Thread thread = new Thread(threadStart);
+            thread.IsBackground = true;
+            thread.Start();
         }
 
-        //[MethodImpl(MethodImplOptions.Synchronized)]
+        private void run()
+        {
+            while(mStatus.Get() != STATUS_DESTROYED)
+            {
+                if(mStatus.Get() == STATUS_CONNECTED)
+                {
+                    retryCounter.Set(-1);
+                    try
+                    {
+                        Logger.info(TAG, "Connected, will wait {0} seconds to check again", IMConstants.CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS);
+                        Monitor.Enter(mLock);
+                        Monitor.Wait(mLock, TimeSpan.FromSeconds(IMConstants.CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS));
+                        Logger.info(TAG, "Connected, wakeup to check again");
+                    }
+                    finally
+                    {
+                        Monitor.Exit(mLock);
+                    }
+                    continue;
+                }
+                try
+                {
+                    mStatus.Set(STATUS_CONNECTING);
+                    retryCounter.Increment();
+                    Connect();
+
+                    Logger.info(TAG, "Connected, waiting identity result {0} seconds, retryCounter {1}", IMConstants.CONFIG_CHANNEL_IDENTITY_RESULT_TIMEOUT_SECNODS, retryCounter.Get());
+                    try
+                    {
+                        Monitor.Enter(mLock);
+                        Monitor.Wait(mLock, TimeSpan.FromSeconds(IMConstants.CONFIG_CHANNEL_IDENTITY_RESULT_TIMEOUT_SECNODS));
+                    }
+                    finally
+                    {
+                        Monitor.Exit(mLock);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.error(TAG, "Connect failed, " + e.Message + " will retry " + retryCounter.Get());
+                    Logger.info(TAG, "Sleep {0} seconds...", IMConstants.CONFIG_CHANNEL_ERROR_RETRY_SECNODS);
+                    Thread.Sleep(TimeSpan.FromSeconds(IMConstants.CONFIG_CHANNEL_ERROR_RETRY_SECNODS)); 
+                    Logger.info(TAG, "Sleep is finished");
+                }
+            }
+
+        }
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Start(string loginUrl)
         {
             ValidateUtils.checkNotNull(loginUrl);
             if (mStatus.CompareAndSet(STATUS_NONE, STATUS_CONNECTING))
             {
                 mLoginUrl = loginUrl;
-                Connect();
+                startThread();
             }
             else
             {
                 Logger.warn(TAG, "IMClient start on loginUrl {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), loginUrl);
             }
         }
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Start(string host, int port, string token)
         {
             ValidateUtils.checkAllNotNull(host, token);
@@ -92,7 +127,7 @@ namespace Oceanus.Core.Network
                 mHost = host;
                 mPort = port;
                 mToken = token;
-                Connect();
+                startThread();
             }
             else
             {
@@ -103,7 +138,11 @@ namespace Oceanus.Core.Network
 
         public void Stop()
         {
-
+            mStatus.Set(STATUS_DESTROYED);
+            if (mChannel != null)
+            {
+                mChannel.Close();
+            }
         }
 
         private void Connect()
@@ -126,27 +165,29 @@ namespace Oceanus.Core.Network
         {
             string host = null, token = null;
             int port = 123;
+            Logger.info(TAG, "LoginToConnectServer " + loginUrl);
             ConnectToServer(host, port, token);
         }
         private void ConnectToServer(string host, int port, string token)
         {
+            Logger.info(TAG, "ConnectToServer host " + host + " port " + port);
             if (mChannel != null)
             {
                 mChannel.Close();
                 mChannel = null;
             }
             mChannel = new WebsocketChannel();
-            mChannel.RegisterChannelStatusDelegate((int status, int code) =>
+            mChannel.RegisterChannelStatusDelegate((IMChannel channel, int status, int code) =>
             {
                 switch(status)
                 {
                     case IMConstants.CHANNEL_STATUS_CONNECTED:
                         SafeUtils.SafeCallback("Peer connected",
-                            () => HandleOnPeerConnected()); 
+                            () => HandleOnPeerConnected(channel)); 
                         break;
                     case IMConstants.CHANNEL_STATUS_DISCONNECTED:
                         SafeUtils.SafeCallback("Peer disconnected",
-                           () => HandleOnPeerDisconnected(code));
+                           () => HandleOnPeerDisconnected(channel, code));
                         break;
                 }
             });
@@ -177,51 +218,65 @@ namespace Oceanus.Core.Network
 
             //});
         }
-
-        private void HandleOnPeerConnected()
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        private void HandleOnPeerConnected(IMChannel chanel)
         {
             //if (mOnPeerConnectedMethod != null)
             //    mOnPeerConnectedMethod();
-            OnPeerConnectedEvents();
+            if(chanel == mChannel)
+            {
+                if(mStatus.Get() != STATUS_CONNECTED)
+                {
+                    mStatus.Set(STATUS_CONNECTED);
+                    SafeUtils.SafeCallback("HandleOnPeerConnected call OnPeerConnectedEvents, connected", () =>
+                    {
+                        OnPeerConnectedEvents();
+                    });
+                }
+                else
+                {
+                    Logger.warn(TAG, "HandleOnPeerConnected illegal, already connected");
+                }
+            } else
+            {
+                Logger.warn(TAG, "Old channel HandleOnPeerConnected " + chanel + " new " + mChannel);
+            }
         }
-
-        private void HandleOnPeerDisconnected(int code)
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        private void HandleOnPeerDisconnected(IMChannel channel, int code)
         {
             //if (mOnPeerDisconnectedMethod != null)
             //    mOnPeerDisconnectedMethod(code);
-            OnPeerDisconnectedEvents(code);
+            if(channel == mChannel)
+            {
+                if (mStatus.Get() != STATUS_DISCONNECTED)
+                {
+                    mStatus.Set(STATUS_DISCONNECTED);
+                    SafeUtils.SafeCallback("HandleOnPeerDisconnected call OnPeerDisconnectedEvents code " + code + " notify reconnecting", () =>
+                    {
+                        OnPeerDisconnectedEvents(code);
+                    });
+                    try
+                    {
+                        Monitor.Enter(mLock);
+                        Monitor.PulseAll(mLock);
+                    }
+                    finally
+                    {
+                        Monitor.Exit(mLock);
+                    }
+                }
+                else
+                {
+                    Logger.warn(TAG, "HandleOnPeerDisconnected illegal, disconnected already");
+                }
+            } else
+            {
+                Logger.warn(TAG, "Old channel HandleOnPeerDisconnected " + channel + " new " + mChannel);
+            }
+            
+           
         }
-
-        public void RegisterIMMessageObserver<T>(string contentType, IMMessageObserver<T> messageObserver)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void UnRegisterIMMessageObserver<T>(string contentType, IMMessageObserver<T> messageObserver)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void UnRegisterIMMessageObserver<T>(string contentType)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void RegisterIMDataObserver<T>(string contentType, IMDataObserver<T> dataObserver)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void UnRegisterIMDataObserver<T>(string contentType, IMDataObserver<T> dataObserver)
-        {
-            throw new System.NotImplementedException();
-        }
-
-        public void UnRegisterIMDataObserver<T>(string contentType)
-        {
-            throw new System.NotImplementedException();
-        }
-
         public void Send(object content, string contentType, OnIMResultReceived onIMResultReceivedMethod, int sendTimeoutSeconds)
         {
             if(mChannel == null || mChannel.Status() != IMConstants.CHANNEL_STATUS_CONNECTED)

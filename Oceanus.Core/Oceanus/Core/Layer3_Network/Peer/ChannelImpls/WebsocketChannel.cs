@@ -67,7 +67,12 @@ namespace Oceanus.Core.Network
                     mWatsonWsClient.ServerConnected += ServerConnected;
                     mWatsonWsClient.ServerDisconnected += ServerDisconnected;
                     mWatsonWsClient.MessageReceived += MessageReceived;
-                    mWatsonWsClient.Start();
+                    mWatsonWsClient.StartWithTimeoutAsync(IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS).Wait();
+
+                    if(!mWatsonWsClient.Connected)
+                    {
+                        throw new CoreException(ErrorCodes.ERROR_NETWORK_DISCONNECTED, "Connecte failed");
+                    }
                 }
             }
             else
@@ -166,7 +171,7 @@ namespace Oceanus.Core.Network
                     if (this.mStatus.CompareAndSet(IMConstants.CHANNEL_STATUS_CONNECTING, status))
                     {
                         if (copiedOnChannelStatusMethod != null)
-                            copiedOnChannelStatusMethod(status, code);
+                            copiedOnChannelStatusMethod(this, status, code);
                     }
                     else
                     {
@@ -177,7 +182,7 @@ namespace Oceanus.Core.Network
                     if (this.mStatus.CompareAndSet(IMConstants.CHANNEL_STATUS_CONNECTING, status))
                     {
                         if (copiedOnChannelStatusMethod != null)
-                            copiedOnChannelStatusMethod(status, code);
+                            copiedOnChannelStatusMethod(this, status, code);
                     } else
                     {
                         Logger.error(TAG, "ChannelStatusChanged status(connected) " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
@@ -189,7 +194,7 @@ namespace Oceanus.Core.Network
                         mStatus.Set(status);
                         ClearDelegates();
                         if (copiedOnChannelStatusMethod != null)
-                            copiedOnChannelStatusMethod(status, code);
+                            copiedOnChannelStatusMethod(this, status, code);
                     }
                     
                     break;

@@ -8,7 +8,7 @@ namespace Oceanus.Core.Network
 {
     internal delegate void OnReceivedMessage(string content, string contentType, string id, string userId, string groupId, long time);
     internal delegate void OnReceivedData(string content, string contentType, string id, long time);
-    internal delegate void OnChannelStatus(int status, int code);
+    internal delegate void OnChannelStatus(IMChannel chanel, int status, int code);
     /**
      * <summary>
      * IMChannel defines behaviors of a channel. 

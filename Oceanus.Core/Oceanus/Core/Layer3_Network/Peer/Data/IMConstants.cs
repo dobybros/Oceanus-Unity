@@ -21,5 +21,10 @@ namespace Oceanus.Core.Network
         public const byte CHANNEL_STATUS_CONNECTING = 5;
         public const byte CHANNEL_STATUS_CONNECTED = 10;
         public const byte CHANNEL_STATUS_DISCONNECTED = 100;
+
+        public const int CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS = 10;
+        public const int CONFIG_CHANNEL_ERROR_RETRY_SECNODS = 1;
+        public const int CONFIG_CHANNEL_IDENTITY_RESULT_TIMEOUT_SECNODS = 8;
+        public const int CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS = 120;
     }
 }
