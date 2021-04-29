@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using WatsonWebsocket;
 
 namespace Oceanus.Core.Network
@@ -24,7 +25,8 @@ namespace Oceanus.Core.Network
         private const string IDENTITY_ID = "Oceanus_Id";
         private AtomicInt mStatus;
         private ConcurrentDictionary<string, IMResultAction> mSendingMap;
-
+        private System.Timers.Timer mPingTimer;
+        private long mServerPingTime;
 
         internal WebsocketChannel()
         {
@@ -45,6 +47,8 @@ namespace Oceanus.Core.Network
 
         private void ClearDelegates()
         {
+            if (mPingTimer != null)
+                mPingTimer.Close();
             mOnReceivedMessageMethod = null;
             mOnReceivedDataMethod = null;
             mOnChannelStatusMethod = null;
@@ -67,11 +71,12 @@ namespace Oceanus.Core.Network
                     mWatsonWsClient.ServerConnected += ServerConnected;
                     mWatsonWsClient.ServerDisconnected += ServerDisconnected;
                     mWatsonWsClient.MessageReceived += MessageReceived;
+                    Logger.info(TAG, "StartWithTimeoutAsync {0} seconds", IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS);
                     mWatsonWsClient.StartWithTimeoutAsync(IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS).Wait();
 
                     if(!mWatsonWsClient.Connected)
                     {
-                        throw new CoreException(ErrorCodes.ERROR_NETWORK_DISCONNECTED, "Connecte failed");
+                        throw new CoreException(ErrorCodes.ERROR_NETWORK_DISCONNECTED, "Connected failed");
                     }
                 }
             }
@@ -93,6 +98,7 @@ namespace Oceanus.Core.Network
                         HandleResult(args.Data.Skip(1).ToArray());
                         break;
                     case IMConstants.TYPE_PING:
+                        mServerPingTime = SafeUtils.CurrentTimeMillis();
                         break;
                     case IMConstants.TYPE_OUTGOINGDATA:
                         HandleOutgoingData(args.Data.Skip(1).ToArray());
@@ -113,7 +119,8 @@ namespace Oceanus.Core.Network
             {
                 SafeUtils.SafeCallback("OutgoingData received", () =>
                 {
-                    mOnReceivedDataMethod(outgoingData.ContentStr, outgoingData.ContentType, outgoingData.Id, outgoingData.Time);
+                    if(mOnReceivedDataMethod != null)
+                        mOnReceivedDataMethod(outgoingData.ContentStr, outgoingData.ContentType, outgoingData.Id, outgoingData.Time);
                 });
             }
         }
@@ -125,7 +132,8 @@ namespace Oceanus.Core.Network
             {
                 SafeUtils.SafeCallback("OutgoingData received", () =>
                 {
-                    mOnReceivedMessageMethod(outgoingMessage.ContentStr, outgoingMessage.ContentType, outgoingMessage.Id, outgoingMessage.FromUserId, outgoingMessage.FromGroupId, outgoingMessage.Time);
+                    if(mOnReceivedMessageMethod != null)
+                        mOnReceivedMessageMethod(outgoingMessage.ContentStr, outgoingMessage.ContentType, outgoingMessage.Id, outgoingMessage.FromUserId, outgoingMessage.FromGroupId, outgoingMessage.Time);
                 });
             }
         }
@@ -181,6 +189,16 @@ namespace Oceanus.Core.Network
                 case IMConstants.CHANNEL_STATUS_CONNECTED:
                     if (this.mStatus.CompareAndSet(IMConstants.CHANNEL_STATUS_CONNECTING, status))
                     {
+                        mPingTimer = new System.Timers.Timer
+                        {
+                            Enabled = true,
+                            Interval = IMConstants.CONFIG_CHANNEL_PING_INTERVAL_MILISECONDS //执行间隔时间,单位为毫秒;此时时间间隔为1分钟  
+                        };
+                        mPingTimer.Start();
+                        mPingTimer.Elapsed += new System.Timers.ElapsedEventHandler(sendPing);
+                        mServerPingTime = SafeUtils.CurrentTimeMillis();
+                        ping();
+
                         if (copiedOnChannelStatusMethod != null)
                             copiedOnChannelStatusMethod(this, status, code);
                     } else
@@ -237,6 +255,39 @@ namespace Oceanus.Core.Network
         public void RegisterMessageDelegate(OnReceivedMessage onReceivedMessageMethod)
         {
             this.mOnReceivedMessageMethod = new OnReceivedMessage(onReceivedMessageMethod);
+        }
+
+        private void sendPing(object source, ElapsedEventArgs e)
+        {
+            long time = SafeUtils.CurrentTimeMillis() - mServerPingTime;
+            if (time > IMConstants.CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS)
+            {
+                Logger.info(TAG, "Ping timeout time {0} timeout {1}, channel will be closed...", time, IMConstants.CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS);
+                Close();
+            } else
+            {
+                ping();
+            }
+        }
+
+        private void ping()
+        {
+            if(mWatsonWsClient.Connected)
+            {
+                byte[] incomingDataPackBytes = new byte[1];
+                incomingDataPackBytes[0] = IMConstants.TYPE_PING;
+                mWatsonWsClient.SendAsync(incomingDataPackBytes).ContinueWith((t) =>
+                {
+                    if (t.Result)
+                    {
+                        Logger.info(TAG, "Send ping successfully");
+                    }
+                    else
+                    {
+                        Logger.error(TAG, "Send ping failed");
+                    }
+                }, TaskContinuationOptions.OnlyOnRanToCompletion);
+            }
         }
 
         public void Send(IMResultAction resultAction)

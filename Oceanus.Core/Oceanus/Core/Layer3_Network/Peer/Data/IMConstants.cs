@@ -26,5 +26,7 @@ namespace Oceanus.Core.Network
         public const int CONFIG_CHANNEL_ERROR_RETRY_SECNODS = 1;
         public const int CONFIG_CHANNEL_IDENTITY_RESULT_TIMEOUT_SECNODS = 8;
         public const int CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS = 120;
+        public const int CONFIG_CHANNEL_PING_INTERVAL_MILISECONDS = 3000;
+        public const int CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS = 5000;
     }
 }
