@@ -28,5 +28,8 @@ namespace Oceanus.Core.Network
         public const int CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS = 120;
         public const int CONFIG_CHANNEL_PING_INTERVAL_MILISECONDS = 3000;
         public const int CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS = 5000;
+
+        public const int TERMINAL_ANDROID = 100;
+        public const int TERMINAL_IOS = 110;
     }
 }

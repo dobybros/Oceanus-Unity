@@ -69,7 +69,9 @@
   <ItemGroup>
     <Compile Include="Oceanus\Core\Errors\ErrorCodes.cs" />
     <Compile Include="Oceanus\Core\Errors\CoreException.cs" />
+    <Compile Include="Oceanus\Core\Layer3_Network\Http\Data\ResponseData.cs" />
     <Compile Include="Oceanus\Core\Layer3_Network\Peer\ChannelImpls\IMResultAction.cs" />
+    <Compile Include="Oceanus\Core\Layer3_Network\Peer\Data\IMLoginInfo.cs" />
     <Compile Include="Oceanus\Core\Layer3_Network\Peer\Data\IMMessage.cs" />
     <Compile Include="Oceanus\Core\Layer3_Network\Peer\Data\IMData.cs" />
     <Compile Include="Oceanus\Core\Layer3_Network\Peer\Data\IMResult.cs" />

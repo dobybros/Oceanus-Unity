@@ -27,7 +27,8 @@ namespace Oceanus.Core.Utils
                 return message;
             for(int i = 0; i < args.Length; i++)
             {
-                message = message.Replace("{" + i + "}", args[i].ToString());
+                if(args[i] != null) 
+                    message = message.Replace("{" + i + "}", args[i].ToString());
             }
             return message;
         }

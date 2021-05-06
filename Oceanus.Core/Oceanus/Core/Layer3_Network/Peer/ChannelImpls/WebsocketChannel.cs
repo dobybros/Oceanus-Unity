@@ -37,10 +37,11 @@ namespace Oceanus.Core.Network
         {
             if(mWatsonWsClient != null && mWatsonWsClient.Connected)
             {
-                mWatsonWsClient.Stop();
+                SafeUtils.SafeCallback("Active close channel when connected",
+                             () => mWatsonWsClient.Stop());
             } else
             {
-                SafeUtils.SafeCallback("Active close channel",
+                SafeUtils.SafeCallback("Active close channel when not connected",
                              () => ChannelStatusChanged(IMConstants.CHANNEL_STATUS_DISCONNECTED, ErrorCodes.ERROR_NETWORK_CLOSED));
             }
         }

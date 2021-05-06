@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -59,6 +60,15 @@ namespace Oceanus.Core.Utils
             });
             return true;
         }
-
+        public static string StreamToString(Stream stream, Encoding encode)
+        {
+            string ret;
+            using (var reader = new StreamReader(stream, encode))
+            {
+                ret = reader.ReadToEnd();
+            }
+            stream.Close();
+            return ret;
+        }
     }
 }

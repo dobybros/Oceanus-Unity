@@ -13,5 +13,7 @@ namespace Oceanus.Core.Errors
         public const int ERROR_MESSAGE_START_SENDING_ALREADY = START + 2;
         public const int ERROR_NETWORK_SEND_FAILED = START + 3;
         public const int ERROR_NETWORK_CLOSED = START + 4;
+        public const int ERROR_NETWORK_LOGIN_FAILED = START + 5;
+        public const int ERROR_JSON_PARSE_FAILED = START + 6;
     }
 }

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -15,6 +16,14 @@ using System.Threading.Tasks;
 
 namespace Oceanus.Core.Network
 {
+    internal class LoginRequest
+    {
+        public string userId;
+        public string deviceId;
+        public int terminal;
+        public bool active;
+        public string jwtToken;
+    }
     internal class IMPeerImpl : IMPeer
     {
         readonly string TAG = typeof(IMPeer).Name;
@@ -22,7 +31,12 @@ namespace Oceanus.Core.Network
         internal string mHost;
         internal int mPort;
         internal string mUserId;
+        internal string mDeviceId;
+        internal int mTerminal;
         internal string mLoginUrl;
+        internal string mJwtToken;
+
+        internal bool mActiveLogin = false;
         private IMChannel mChannel;
         public static readonly int STATUS_NONE = 1;
         public static readonly int STATUS_CONNECTING = 5;
@@ -39,23 +53,28 @@ namespace Oceanus.Core.Network
         public event OnPeerReceivedMessage OnPeerReceivedMessageEvents;
         public event OnPeerReceivedData OnPeerReceivedDataEvents;
 
-        public IMPeerImpl(string userId)
+        public IMPeerImpl(string userId, string deviceId, int terminal)
         {
+            ValidateUtils.CheckNotNull(userId);
+            ValidateUtils.CheckEqualsAny(terminal, IMConstants.TERMINAL_ANDROID, IMConstants.TERMINAL_IOS);
+
             mUserId = userId;
+            mDeviceId = deviceId;
+            mTerminal = terminal;
             mStatus = new AtomicInt(STATUS_NONE);
             retryCounter = new AtomicInt(-1);
             //IncomingInvocation incomingInvocation = new global::IncomingInvocation();
         }
 
-        private void startThread()
+        private void StartThread()
         {
-            ThreadStart threadStart = new ThreadStart(run);
+            ThreadStart threadStart = new ThreadStart(Run);
             Thread thread = new Thread(threadStart);
             thread.IsBackground = true;
             thread.Start();
         }
 
-        private void run()
+        private void Run()
         {
             while(mStatus.Get() != STATUS_DESTROYED)
             {
@@ -104,13 +123,15 @@ namespace Oceanus.Core.Network
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
-        public void Start(string loginUrl)
+        public void Start(string loginUrl, string jwtToken)
         {
-            ValidateUtils.checkNotNull(loginUrl);
+            ValidateUtils.CheckNotNull(loginUrl);
             if (mStatus.CompareAndSet(STATUS_NONE, STATUS_CONNECTING))
             {
+                mActiveLogin = true;
                 mLoginUrl = loginUrl;
-                startThread();
+                mJwtToken = jwtToken;
+                StartThread();
             }
             else
             {
@@ -120,14 +141,14 @@ namespace Oceanus.Core.Network
         [MethodImpl(MethodImplOptions.Synchronized)]
         public void Start(string host, int port, string token)
         {
-            ValidateUtils.checkAllNotNull(host, token);
+            ValidateUtils.CheckAllNotNull(host, token);
 
             if (mStatus.CompareAndSet(STATUS_NONE, STATUS_CONNECTING))
             {
                 mHost = host;
                 mPort = port;
                 mToken = token;
-                startThread();
+                StartThread();
             }
             else
             {
@@ -163,10 +184,59 @@ namespace Oceanus.Core.Network
 
         private void LoginToConnectServer(string loginUrl)
         {
-            string host = null, token = null;
-            int port = 123;
-            Logger.info(TAG, "LoginToConnectServer " + loginUrl);
-            ConnectToServer(host, port, token);
+            HttpWebRequest HttpWebRequest = (HttpWebRequest)WebRequest.Create(loginUrl);
+            HttpWebRequest.Method = "POST";
+            HttpWebRequest.ReadWriteTimeout = 30000;
+            LoginRequest loginRequest = new LoginRequest
+            {
+                userId = mUserId,
+                deviceId = mDeviceId,
+                terminal = mTerminal,
+                active = mActiveLogin, 
+                jwtToken = mJwtToken
+            };
+            string json = JsonMapper.ToJson(loginRequest);
+            byte[] body = Encoding.UTF8.GetBytes(json);
+            HttpWebRequest.ContentType = "application/json";
+            using (var stream = HttpWebRequest.GetRequestStream())
+            {
+                stream.Write(body, 0, body.Length);
+            }
+            ;
+            
+            try
+            {
+                using (HttpWebResponse webresp = (HttpWebResponse)HttpWebRequest.GetResponse())
+                {
+                    if (webresp.StatusCode != HttpStatusCode.OK)
+                    {
+                        throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, "Login status code failed, " + (int)webresp.StatusCode);
+                    }
+                    string responseStr = SafeUtils.StreamToString(webresp.GetResponseStream(), Encoding.UTF8);
+                    if (responseStr == null || responseStr.Length == 0)
+                        throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, "Login response is empty");
+                    ResponseData<IMLoginInfo> responseData;
+                    try
+                    {
+                        responseData = JsonMapper.ToObject<ResponseData<IMLoginInfo>>(responseStr);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new CoreException(ErrorCodes.ERROR_JSON_PARSE_FAILED, "Parse login responseStr json failed, " + e.Message + ":" + responseStr);
+                    }
+                    if (responseData.code != 1)
+                    {
+                        throw new CoreException(responseData.code, "Server error, code " + responseData.code + " message " + responseData.message);
+                    }
+                    Logger.info(TAG, "LoginToConnectServer on url {0}, host {1}, port {2}, token {3}", loginUrl, responseData.data.host, responseData.data.port, responseData.data.token);
+                    ConnectToServer(responseData.data.host, responseData.data.port, responseData.data.token);
+                }
+            }
+            catch (WebException e)
+            {
+                //请求失败
+                throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, "Login failed, " + e.Message);
+            }
         }
         private void ConnectToServer(string host, int port, string token)
         {
@@ -227,6 +297,8 @@ namespace Oceanus.Core.Network
             {
                 if(mStatus.Get() != STATUS_CONNECTED)
                 {
+                    if(mActiveLogin)
+                        mActiveLogin = false;
                     mStatus.Set(STATUS_CONNECTED);
                     SafeUtils.SafeCallback("HandleOnPeerConnected call OnPeerConnectedEvents, connected", () =>
                     {
