@@ -1,22 +1,24 @@
-﻿using LitJson;
-using NetWork.Oceanus;
-using NetWork.Oceanus.Baloot;
-using Oceanus.Core.Network;
-using Oceanus.Core.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 
-namespace XXX
+namespace Oceanus.Test
 {
-    class OceanusTest
+    using LitJson;
+    using NetWork.Oceanus;
+    using NetWork.Oceanus.Baloot;
+    using Oceanus.Core.Network;
+    using Oceanus.Core.Utils;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Threading.Tasks;
+
+    class BalootMain
     {
         static void Main(string[] args)
         {
             run();
+            Console.ReadKey();
         }
+
         public static void run()
         {
             string deviceId = "aplomb's android deviceId";
@@ -36,7 +38,7 @@ namespace XXX
                             case NetworkEvent.TYPE_CONNECTED:
                                 lobbyService.StartMatching("gwgamebaloot", "group1", (IMResult result1) =>
                                 {
-                                    if(result1.Code == 1)
+                                    if (result1.Code == 1)
                                     {
 
                                     }
@@ -66,14 +68,14 @@ namespace XXX
                                     };
                                 };
                                 BalootGameManager balootGameManager = balootGameService.GetBalootGameManager();
-                                balootGameManager.OnBalootPlayerChangedEvents += (string playerId, Dictionary<string, FieldChangedEvent>  fieldChangedEvents) =>
+                                balootGameManager.OnBalootPlayerChangedEvents += (string playerId, Dictionary<string, FieldChangedEvent> fieldChangedEvents) =>
                                 {
                                     Logger.info("Test", "OnBalootPlayerChangedEvents playerId {0}, fieldChangedEvents {1}", playerId, fieldChangedEvents);
                                 };
                                 balootGameManager.OnBalootFrameDataChangedEvents += (Dictionary<string, FieldChangedEvent> fieldChangedEvents) =>
                                 {
                                     FieldChangedEvent stateEvent = fieldChangedEvents.GetValueOrDefault("state");
-                                    if(stateEvent != null)
+                                    if (stateEvent != null)
                                     {
                                         Logger.info("Test", "state changed from " + stateEvent.OldValue + " to " + stateEvent.NewValue);
                                         //balootGameService.ASHKAL_CONFIRM(1, (IMResult result) =>

@@ -107,7 +107,7 @@ namespace NetWork.Oceanus.Baloot
                         fieldChangedEvent.Field = prop.Name;
                         
                         prop.SetValue(this, value, null);
-                        fieldChangedEvents.TryAdd(prop.Name, fieldChangedEvent);
+                        fieldChangedEvents.Add(prop.Name, fieldChangedEvent);
                     }
                 }
             }
@@ -121,18 +121,18 @@ namespace NetWork.Oceanus.Baloot
                     this.players = new Dictionary<string, Player>();
                 foreach (string playerId in source.players.Keys)
                 {
-                    Player player = this.players.GetValueOrDefault(playerId);
+                    Player player = this.players[playerId];
                     if(player != null)
                     {
-                        Player sourcePlayer = source.players.GetValueOrDefault(playerId);
+                        Player sourcePlayer = source.players[playerId];
                         if(sourcePlayer != null)
                             CopyValues(player, sourcePlayer, balootGameManager);
                     } else
                     {
-                        player = source.players.GetValueOrDefault(playerId);
+                        player = source.players[playerId];
                         if(player != null)
                         {
-                            this.players.TryAdd(playerId, player);
+                            this.players.Add(playerId, player);
                             balootGameManager.CallOnBalootPlayerAdded(player);
                         }
                     }
@@ -159,7 +159,7 @@ namespace NetWork.Oceanus.Baloot
                     fieldChangedEvent.Field = prop.Name;
 
                     prop.SetValue(this, value, null);
-                    fieldChangedEvents.TryAdd(prop.Name, fieldChangedEvent);
+                    fieldChangedEvents.Add(prop.Name, fieldChangedEvent);
                 }
             }
             balootGameManager.CallOnBalootPlayerChanged(target.id, fieldChangedEvents);
