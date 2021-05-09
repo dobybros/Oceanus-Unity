@@ -28,8 +28,11 @@ namespace Oceanus.Core.Network
         private System.Timers.Timer mPingTimer;
         private long mServerPingTime;
 
-        internal WebsocketChannel()
+        private string mPrefix;
+
+        internal WebsocketChannel(string prefix)
         {
+            mPrefix = prefix;
             mStatus = new AtomicInt(IMConstants.CHANNEL_STATUS_INIT);
             mSendingMap = new ConcurrentDictionary<string, IMResultAction>();
         }
@@ -37,11 +40,11 @@ namespace Oceanus.Core.Network
         {
             if(mWatsonWsClient != null && mWatsonWsClient.Connected)
             {
-                SafeUtils.SafeCallback("Active close channel when connected",
+                SafeUtils.SafeCallback(mPrefix + ": Active close channel when connected",
                              () => mWatsonWsClient.Stop());
             } else
             {
-                SafeUtils.SafeCallback("Active close channel when not connected",
+                SafeUtils.SafeCallback(mPrefix + ": Active close channel when not connected",
                              () => ChannelStatusChanged(IMConstants.CHANNEL_STATUS_DISCONNECTED, ErrorCodes.ERROR_NETWORK_CLOSED));
             }
         }
@@ -72,24 +75,24 @@ namespace Oceanus.Core.Network
                     mWatsonWsClient.ServerConnected += ServerConnected;
                     mWatsonWsClient.ServerDisconnected += ServerDisconnected;
                     mWatsonWsClient.MessageReceived += MessageReceived;
-                    Logger.info(TAG, "StartWithTimeoutAsync {0} seconds", IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS);
+                    Logger.info(TAG, mPrefix + ": StartWithTimeoutAsync {0} seconds", IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS);
                     mWatsonWsClient.StartWithTimeoutAsync(IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS).Wait();
 
                     if(!mWatsonWsClient.Connected)
                     {
-                        throw new CoreException(ErrorCodes.ERROR_NETWORK_DISCONNECTED, "Connected failed");
+                        throw new CoreException(ErrorCodes.ERROR_NETWORK_DISCONNECTED, mPrefix + ": Connected failed");
                     }
                 }
             }
             else
             {
-                Logger.error(TAG, "Connect failed, because illegal status, expecting " + IMConstants.CHANNEL_STATUS_INIT + " but " + mStatus.Get());
+                Logger.error(TAG, mPrefix + ": Connect failed, because illegal status, expecting " + IMConstants.CHANNEL_STATUS_INIT + " but " + mStatus.Get());
             }
         }
         void MessageReceived(object sender, MessageReceivedEventArgs args)
         {
             //Logger.info(TAG, "Message from server: " + Encoding.UTF8.GetString(args.Data) + " type " + args.Data[0]);
-            Logger.info(TAG, "Message from server: type " + args.Data[0] + " length " + args.Data.Length);
+            //Logger.info(TAG, "Message from server: type " + args.Data[0] + " length " + args.Data.Length);
             if(args != null && args.Data != null && args.Data.Length > 0)
             {
                 byte type = args.Data[0];
@@ -108,7 +111,7 @@ namespace Oceanus.Core.Network
                         HandleOutgoingMessage(args.Data.Skip(1).ToArray());
                         break;
                     default:
-                        Logger.error(TAG, "Unexpected data received, type {0} length {1}. Ignored...", type, args.Data.Length);
+                        Logger.error(TAG, mPrefix + ": Unexpected data received, type {0} length {1}. Ignored...", type, args.Data.Length);
                         break;
                 }
             }
@@ -118,7 +121,7 @@ namespace Oceanus.Core.Network
             OutgoingData outgoingData = OutgoingData.Parser.ParseFrom(data);
             if(outgoingData != null)
             {
-                SafeUtils.SafeCallback("OutgoingData received", () =>
+                SafeUtils.SafeCallback(mPrefix + ": OutgoingData received type " + outgoingData.ContentType + " content " + outgoingData.ContentStr, () =>
                 {
                     if(mOnReceivedDataMethod != null)
                         mOnReceivedDataMethod(outgoingData.ContentStr, outgoingData.ContentType, outgoingData.Id, outgoingData.Time);
@@ -131,7 +134,7 @@ namespace Oceanus.Core.Network
             OutgoingMessage outgoingMessage = OutgoingMessage.Parser.ParseFrom(data);
             if (outgoingMessage != null)
             {
-                SafeUtils.SafeCallback("OutgoingData received", () =>
+                SafeUtils.SafeCallback(mPrefix + ": OutgoingMessage received type " + outgoingMessage.ContentType + " content " + outgoingMessage.ContentStr, () =>
                 {
                     if(mOnReceivedMessageMethod != null)
                         mOnReceivedMessageMethod(outgoingMessage.ContentStr, outgoingMessage.ContentType, outgoingMessage.Id, outgoingMessage.FromUserId, outgoingMessage.FromGroupId, outgoingMessage.Time);
@@ -149,11 +152,11 @@ namespace Oceanus.Core.Network
                 {
                     if(result.Code == 1)
                     {
-                        SafeUtils.SafeCallback("Channel connected " + result, 
+                        SafeUtils.SafeCallback(mPrefix + ": Channel connected " + result, 
                             () => ChannelStatusChanged(IMConstants.CHANNEL_STATUS_CONNECTED, result.Code));
                     } else
                     {
-                        SafeUtils.SafeCallback("Channel connect failed, code " + result.Code,
+                        SafeUtils.SafeCallback(mPrefix + ": Channel connect failed, code " + result.Code,
                             () => ChannelStatusChanged(IMConstants.CHANNEL_STATUS_DISCONNECTED, result.Code));
                     }
                 } else
@@ -184,7 +187,7 @@ namespace Oceanus.Core.Network
                     }
                     else
                     {
-                        Logger.error(TAG, "ChannelStatusChanged(connecting) status " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
+                        Logger.error(TAG, mPrefix + ": ChannelStatusChanged(connecting) status " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
                     }
                     break;
                 case IMConstants.CHANNEL_STATUS_CONNECTED:
@@ -204,7 +207,7 @@ namespace Oceanus.Core.Network
                             copiedOnChannelStatusMethod(this, status, code);
                     } else
                     {
-                        Logger.error(TAG, "ChannelStatusChanged status(connected) " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
+                        Logger.error(TAG, mPrefix + ": ChannelStatusChanged status(connected) " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
                     }
                     break;
                 case IMConstants.CHANNEL_STATUS_DISCONNECTED:
@@ -234,17 +237,17 @@ namespace Oceanus.Core.Network
             {
                 if(t.Result)
                 {
-                    Logger.info(TAG, "Send identity successfully");
+                    Logger.info(TAG, mPrefix + ": Send identity successfully");
                 } else
                 {
-                    Logger.error(TAG, "Send identity failed");
+                    Logger.error(TAG, mPrefix + ": Send identity failed");
                 }
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
         }
 
         void ServerDisconnected(object sender, EventArgs args)
         {
-            SafeUtils.SafeCallback("ServerDisconnected, sender " + sender,
+            SafeUtils.SafeCallback(mPrefix + ": ServerDisconnected, sender " + sender,
                             () => ChannelStatusChanged(IMConstants.CHANNEL_STATUS_DISCONNECTED, 8888));
         }
 
@@ -263,7 +266,7 @@ namespace Oceanus.Core.Network
             long time = SafeUtils.CurrentTimeMillis() - mServerPingTime;
             if (time > IMConstants.CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS)
             {
-                Logger.info(TAG, "Ping timeout time {0} timeout {1}, channel will be closed...", time, IMConstants.CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS);
+                Logger.info(TAG, mPrefix + ": Ping timeout time {0} timeout {1}, channel will be closed...", time, IMConstants.CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS);
                 Close();
             } else
             {
@@ -281,11 +284,11 @@ namespace Oceanus.Core.Network
                 {
                     if (t.Result)
                     {
-                        Logger.info(TAG, "Send ping successfully");
+                        //Logger.info(TAG, "Send ping successfully");
                     }
                     else
                     {
-                        Logger.error(TAG, "Send ping failed");
+                        Logger.error(TAG, mPrefix + ": Send ping failed");
                     }
                 }, TaskContinuationOptions.OnlyOnRanToCompletion);
             }
@@ -299,7 +302,7 @@ namespace Oceanus.Core.Network
                 if (mSendingMap.TryAdd(resultAction.Id, resultAction)) { 
                     if (mWatsonWsClient == null || mStatus.Get() != IMConstants.CHANNEL_STATUS_CONNECTED)
                     {
-                        throw new CoreException(ErrorCodes.ERROR_NETWORK_DISCONNECTED, "Network unavailable");
+                        throw new CoreException(ErrorCodes.ERROR_NETWORK_DISCONNECTED, mPrefix + ": Network unavailable");
                     }
                     resultAction.CancellationTokenSource = new CancellationTokenSource();
                     _ = SafeUtils.WaitTimeout(resultAction.SendTimeoutSeconds, () =>
@@ -310,7 +313,7 @@ namespace Oceanus.Core.Network
                 }
                 else
                 {
-                    throw new CoreException(ErrorCodes.ERROR_MESSAGE_START_SENDING_ALREADY, Logger.Format("Message {0} start sending already, contentType {1} content {2}", resultAction.Id, resultAction.ContentType, resultAction.Content));
+                    throw new CoreException(ErrorCodes.ERROR_MESSAGE_START_SENDING_ALREADY, Logger.Format(mPrefix + ": Message {0} start sending already, contentType {1} content {2}", resultAction.Id, resultAction.ContentType, resultAction.Content));
                 }
             }
             catch (Exception e)
@@ -325,7 +328,7 @@ namespace Oceanus.Core.Network
                 HandleIMResult(resultAction, new IMResult()
                 {
                     Code = code,
-                    Description = "Send failed, " + e.Message,
+                    Description = mPrefix + ": Send failed, " + e.Message,
                     Time = SafeUtils.CurrentTimeMillis(),
                 });
             }
@@ -346,7 +349,7 @@ namespace Oceanus.Core.Network
             if (resultAction.OnIMResultReceivedMethod != null)
             {
                 resultAction.IMResult = result;
-                SafeUtils.SafeCallback("HandleIMResult for Id " + resultAction.Id, () =>
+                SafeUtils.SafeCallback(mPrefix + ": HandleIMResult for Id " + resultAction.Id, () =>
                 {
                     resultAction.OnIMResultReceivedMethod(resultAction.IMResult);
                 });
@@ -368,11 +371,11 @@ namespace Oceanus.Core.Network
             {
                 if (t.Result)
                 {
-                    Logger.info(TAG, "Send incomingDataPackBytes successfully");
+                    Logger.info(TAG, mPrefix + ": Send incomingDataPackBytes successfully type " + incomingData.ContentType + " content " + incomingData.ContentStr);
                 }
                 else
                 {
-                    Logger.error(TAG, "Send incomingDataPackBytes failed");
+                    Logger.error(TAG, mPrefix + ": Send incomingDataPackBytes failed type " + incomingData.ContentType + " content " + incomingData.ContentStr);
                 }
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
         }

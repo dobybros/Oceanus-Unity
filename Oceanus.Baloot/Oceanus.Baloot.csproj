@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <StartupObject>Oceanus.Test.Program</StartupObject>
+    <StartupObject>Oceanus.Baloot.Program</StartupObject>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -18,6 +18,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Oceanus.Core\Oceanus.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="LitJSON">
+      <HintPath>..\Oceanus.Core\bin\Debug\LitJSON.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

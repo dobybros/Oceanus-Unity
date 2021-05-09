@@ -28,6 +28,7 @@ namespace Oceanus.Core.Network
         }
 
         internal object mActualContent;
+       
         public T GetContent<T>()
         {
             if (mActualContent == null)

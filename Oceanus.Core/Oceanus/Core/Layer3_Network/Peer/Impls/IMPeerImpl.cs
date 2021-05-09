@@ -35,6 +35,7 @@ namespace Oceanus.Core.Network
         internal int mTerminal;
         internal string mLoginUrl;
         internal string mJwtToken;
+        internal string mPrefix;
 
         internal bool mActiveLogin = false;
         private IMChannel mChannel;
@@ -53,7 +54,7 @@ namespace Oceanus.Core.Network
         public event OnPeerReceivedMessage OnPeerReceivedMessageEvents;
         public event OnPeerReceivedData OnPeerReceivedDataEvents;
 
-        public IMPeerImpl(string userId, string deviceId, int terminal)
+        public IMPeerImpl(string userId, string deviceId, int terminal, string prefix)
         {
             ValidateUtils.CheckNotNull(userId);
             ValidateUtils.CheckEqualsAny(terminal, IMConstants.TERMINAL_ANDROID, IMConstants.TERMINAL_IOS);
@@ -61,6 +62,7 @@ namespace Oceanus.Core.Network
             mUserId = userId;
             mDeviceId = deviceId;
             mTerminal = terminal;
+            mPrefix = prefix;
             mStatus = new AtomicInt(STATUS_NONE);
             retryCounter = new AtomicInt(-1);
             //IncomingInvocation incomingInvocation = new global::IncomingInvocation();
@@ -83,10 +85,10 @@ namespace Oceanus.Core.Network
                     retryCounter.Set(-1);
                     try
                     {
-                        Logger.info(TAG, "Connected, will wait {0} seconds to check again", IMConstants.CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS);
+                        Logger.info(TAG, mPrefix + ": Connected, will wait {0} seconds to check again", IMConstants.CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS);
                         Monitor.Enter(mLock);
                         Monitor.Wait(mLock, TimeSpan.FromSeconds(IMConstants.CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS));
-                        Logger.info(TAG, "Connected, wakeup to check again");
+                        Logger.info(TAG, mPrefix + ": Connected, wakeup to check again");
                     }
                     finally
                     {
@@ -100,7 +102,7 @@ namespace Oceanus.Core.Network
                     retryCounter.Increment();
                     Connect();
 
-                    Logger.info(TAG, "Connected, waiting identity result {0} seconds, retryCounter {1}", IMConstants.CONFIG_CHANNEL_IDENTITY_RESULT_TIMEOUT_SECNODS, retryCounter.Get());
+                    Logger.info(TAG, mPrefix + ": Connected, waiting identity result {0} seconds, retryCounter {1}", IMConstants.CONFIG_CHANNEL_IDENTITY_RESULT_TIMEOUT_SECNODS, retryCounter.Get());
                     try
                     {
                         Monitor.Enter(mLock);
@@ -113,10 +115,10 @@ namespace Oceanus.Core.Network
                 }
                 catch (Exception e)
                 {
-                    Logger.error(TAG, "Connect failed, " + e.Message + " will retry " + retryCounter.Get());
-                    Logger.info(TAG, "Sleep {0} seconds...", IMConstants.CONFIG_CHANNEL_ERROR_RETRY_SECNODS);
+                    Logger.error(TAG, mPrefix + ": Connect failed, " + e.Message + " will retry " + retryCounter.Get());
+                    Logger.info(TAG, mPrefix + ": Sleep {0} seconds...", IMConstants.CONFIG_CHANNEL_ERROR_RETRY_SECNODS);
                     Thread.Sleep(TimeSpan.FromSeconds(IMConstants.CONFIG_CHANNEL_ERROR_RETRY_SECNODS)); 
-                    Logger.info(TAG, "Sleep is finished");
+                    Logger.info(TAG, mPrefix + ": Sleep is finished");
                 }
             }
 
@@ -135,7 +137,7 @@ namespace Oceanus.Core.Network
             }
             else
             {
-                Logger.warn(TAG, "IMClient start on loginUrl {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), loginUrl);
+                Logger.warn(TAG, mPrefix + ": IMClient start on loginUrl {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), loginUrl);
             }
         }
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -152,7 +154,7 @@ namespace Oceanus.Core.Network
             }
             else
             {
-                Logger.warn(TAG, "IMClient start on host {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), host);
+                Logger.warn(TAG, mPrefix + ": IMClient start on host {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), host);
             }
             
         }
@@ -178,7 +180,7 @@ namespace Oceanus.Core.Network
             }
             else
             {
-                Logger.error(TAG, "Connect failed because parameters are illegal, mLoginUrl {0} mHost {1}, mPort {2} mToken {3}", mLoginUrl, mHost, mPort, mToken);
+                Logger.error(TAG, mPrefix + ": Connect failed because parameters are illegal, mLoginUrl {0} mHost {1}, mPort {2} mToken {3}", mLoginUrl, mHost, mPort, mToken);
             }
         }
 
@@ -210,11 +212,11 @@ namespace Oceanus.Core.Network
                 {
                     if (webresp.StatusCode != HttpStatusCode.OK)
                     {
-                        throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, "Login status code failed, " + (int)webresp.StatusCode);
+                        throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, mPrefix + ": Login status code failed, " + (int)webresp.StatusCode);
                     }
                     string responseStr = SafeUtils.StreamToString(webresp.GetResponseStream(), Encoding.UTF8);
                     if (responseStr == null || responseStr.Length == 0)
-                        throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, "Login response is empty");
+                        throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, mPrefix + ": Login response is empty");
                     ResponseData<IMLoginInfo> responseData;
                     try
                     {
@@ -222,41 +224,41 @@ namespace Oceanus.Core.Network
                     }
                     catch (Exception e)
                     {
-                        throw new CoreException(ErrorCodes.ERROR_JSON_PARSE_FAILED, "Parse login responseStr json failed, " + e.Message + ":" + responseStr);
+                        throw new CoreException(ErrorCodes.ERROR_JSON_PARSE_FAILED, mPrefix + ": Parse login responseStr json failed, " + e.Message + ":" + responseStr);
                     }
                     if (responseData.code != 1)
                     {
-                        throw new CoreException(responseData.code, "Server error, code " + responseData.code + " message " + responseData.message);
+                        throw new CoreException(responseData.code, mPrefix + ": Server error, code " + responseData.code + " message " + responseData.message);
                     }
-                    Logger.info(TAG, "LoginToConnectServer on url {0}, host {1}, port {2}, token {3}", loginUrl, responseData.data.host, responseData.data.port, responseData.data.token);
+                    Logger.info(TAG, mPrefix + ": LoginToConnectServer on url {0}, host {1}, port {2}, token {3}", loginUrl, responseData.data.host, responseData.data.port, responseData.data.token);
                     ConnectToServer(responseData.data.host, responseData.data.port, responseData.data.token);
                 }
             }
             catch (WebException e)
             {
                 //请求失败
-                throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, "Login failed, " + e.Message);
+                throw new CoreException(ErrorCodes.ERROR_NETWORK_LOGIN_FAILED, mPrefix + ": Login failed, " + e.Message);
             }
         }
         private void ConnectToServer(string host, int port, string token)
         {
-            Logger.info(TAG, "ConnectToServer host " + host + " port " + port);
+            Logger.info(TAG, mPrefix + ": ConnectToServer host " + host + " port " + port);
             if (mChannel != null)
             {
                 mChannel.Close();
                 mChannel = null;
             }
-            mChannel = new WebsocketChannel();
+            mChannel = new WebsocketChannel(mPrefix);
             mChannel.RegisterChannelStatusDelegate((IMChannel channel, int status, int code) =>
             {
                 switch(status)
                 {
                     case IMConstants.CHANNEL_STATUS_CONNECTED:
-                        SafeUtils.SafeCallback("Peer connected",
+                        SafeUtils.SafeCallback(mPrefix + ": Peer connected",
                             () => HandleOnPeerConnected(channel)); 
                         break;
                     case IMConstants.CHANNEL_STATUS_DISCONNECTED:
-                        SafeUtils.SafeCallback("Peer disconnected",
+                        SafeUtils.SafeCallback(mPrefix + ": Peer disconnected",
                            () => HandleOnPeerDisconnected(channel, code));
                         break;
                 }
@@ -300,18 +302,18 @@ namespace Oceanus.Core.Network
                     if(mActiveLogin)
                         mActiveLogin = false;
                     mStatus.Set(STATUS_CONNECTED);
-                    SafeUtils.SafeCallback("HandleOnPeerConnected call OnPeerConnectedEvents, connected", () =>
+                    SafeUtils.SafeCallback(mPrefix + ": HandleOnPeerConnected call OnPeerConnectedEvents, connected", () =>
                     {
                         OnPeerConnectedEvents();
                     });
                 }
                 else
                 {
-                    Logger.warn(TAG, "HandleOnPeerConnected illegal, already connected");
+                    Logger.warn(TAG, mPrefix + ": HandleOnPeerConnected illegal, already connected");
                 }
             } else
             {
-                Logger.warn(TAG, "Old channel HandleOnPeerConnected " + chanel + " new " + mChannel);
+                Logger.warn(TAG, mPrefix + ": Old channel HandleOnPeerConnected " + chanel + " new " + mChannel);
             }
         }
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -324,7 +326,7 @@ namespace Oceanus.Core.Network
                 if (mStatus.Get() != STATUS_DISCONNECTED)
                 {
                     mStatus.Set(STATUS_DISCONNECTED);
-                    SafeUtils.SafeCallback("HandleOnPeerDisconnected call OnPeerDisconnectedEvents code " + code + " notify reconnecting", () =>
+                    SafeUtils.SafeCallback(mPrefix + ": HandleOnPeerDisconnected call OnPeerDisconnectedEvents code " + code + " notify reconnecting", () =>
                     {
                         OnPeerDisconnectedEvents(code);
                     });
@@ -340,11 +342,11 @@ namespace Oceanus.Core.Network
                 }
                 else
                 {
-                    Logger.warn(TAG, "HandleOnPeerDisconnected illegal, disconnected already");
+                    Logger.warn(TAG, mPrefix + ": HandleOnPeerDisconnected illegal, disconnected already " + " code " + code);
                 }
             } else
             {
-                Logger.warn(TAG, "Old channel HandleOnPeerDisconnected " + channel + " new " + mChannel);
+                Logger.warn(TAG, mPrefix + ": Old channel HandleOnPeerDisconnected " + channel + " new " + mChannel + " code " + code);
             }
             
            

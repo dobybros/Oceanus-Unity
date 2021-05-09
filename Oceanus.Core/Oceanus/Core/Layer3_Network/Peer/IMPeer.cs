@@ -40,6 +40,7 @@ namespace Oceanus.Core.Network
         private string mUserId;
         private string mDeviceId;
         private int mTermianl;
+        private string mPrefix;
         public static IMPeerBuilder Builder()
         {
             return new IMPeerBuilder();
@@ -47,6 +48,11 @@ namespace Oceanus.Core.Network
         public IMPeerBuilder WithUserId(string userId)
         {
             this.mUserId = userId;
+            return this;
+        }
+        public IMPeerBuilder withPrefix(string prefix)
+        {
+            this.mPrefix = prefix;
             return this;
         }
         public IMPeerBuilder WithDeviceId(string deviceId)
@@ -69,7 +75,7 @@ namespace Oceanus.Core.Network
             ValidateUtils.CheckAllNotNull(mUserId, mDeviceId);
             ValidateUtils.CheckEqualsAny(mTermianl, IMConstants.TERMINAL_ANDROID, IMConstants.TERMINAL_IOS);
 
-            return (IMPeer) new IMPeerImpl(mUserId, mDeviceId, mTermianl);
+            return (IMPeer) new IMPeerImpl(mUserId, mDeviceId, mTermianl, mPrefix);
         }
     }
     
