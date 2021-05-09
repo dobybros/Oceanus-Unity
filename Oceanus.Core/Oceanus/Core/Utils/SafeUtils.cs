@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Oceanus.Core.Utils
 {
-    class SafeUtils
+    public class SafeUtils
     {
         private static readonly string TAG = typeof(SafeUtils).Name;
         public static void SafeCallback(string actionName, Action action)

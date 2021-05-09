@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Oceanus.Core.Utils
 {
-    class ValidateUtils
+    public class ValidateUtils
     {
         public static void CheckNotNull(object obj)
         {

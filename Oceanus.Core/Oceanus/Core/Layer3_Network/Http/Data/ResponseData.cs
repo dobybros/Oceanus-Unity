@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Oceanus.Core.Network
 {
-    class ResponseData<T>
+    public class ResponseData<T>
     {
         public int code
         {

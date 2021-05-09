@@ -33,7 +33,7 @@ namespace Oceanus.Core.Network
          * <param name="id">any id, used for find corresponding IMResult. Also server will use the id to defend repeated message sending.</param>
          * <param name="sendTimeoutSeconds">send timeout seconds, only available when channel is connected</param>
          */
-        void Send(object content, string contentType, OnIMResultReceived onIMResultReceivedMethod = null, int sendTimeoutSeconds = 0);
+        void Send(object content, string contentType, OnIMResultReceived onIMResultReceivedMethod = null, int sendTimeoutSeconds = 10);
     }
     public class IMPeerBuilder
     {
