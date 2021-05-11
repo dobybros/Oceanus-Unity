@@ -47,18 +47,21 @@ namespace Oceanus.Core.Network
         internal AtomicInt mStatus;
         internal AtomicInt retryCounter;
         protected object mLock = new object();
+        private List<int> mShutdownErrorCodes;
 
         public event OnPeerConnected OnPeerConnectedEvents;
         public event OnPeerDisconnected OnPeerDisconnectedEvents;
         //public event OnIMResultReceived OnIMResultReceivedEvents;
         public event OnPeerReceivedMessage OnPeerReceivedMessageEvents;
         public event OnPeerReceivedData OnPeerReceivedDataEvents;
+        public event OnPeerShuttedDown OnPeerShuttedDownEvents;
 
-        public IMPeerImpl(string userId, string deviceId, int terminal, string prefix)
+        public IMPeerImpl(string userId, string deviceId, int terminal, string prefix, List<int> shutdownErrorCodes = null)
         {
             ValidateUtils.CheckNotNull(userId);
             ValidateUtils.CheckEqualsAny(terminal, IMConstants.TERMINAL_ANDROID, IMConstants.TERMINAL_IOS);
 
+            mShutdownErrorCodes = shutdownErrorCodes;
             mUserId = userId;
             mDeviceId = deviceId;
             mTerminal = terminal;
@@ -121,7 +124,7 @@ namespace Oceanus.Core.Network
                     Logger.info(TAG, mPrefix + ": Sleep is finished");
                 }
             }
-
+            Logger.info(TAG, "IMPeer {0} is destroyed", mPrefix);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -323,13 +326,30 @@ namespace Oceanus.Core.Network
             //    mOnPeerDisconnectedMethod(code);
             if(channel == mChannel)
             {
-                if (mStatus.Get() != STATUS_DISCONNECTED)
+                bool needWakeup = false;
+                if(mShutdownErrorCodes != null && mShutdownErrorCodes.Contains(code))
+                {
+                    mStatus.Set(STATUS_DESTROYED);
+                    SafeUtils.SafeCallback(mPrefix + ": HandleOnPeerDisconnected call OnPeerShuttedDownEvents code " + code + " will NOT reconnect", () =>
+                    {
+                        OnPeerShuttedDownEvents(code);
+                    });
+                    needWakeup = true;
+                } else if (mStatus.Get() != STATUS_DISCONNECTED)
                 {
                     mStatus.Set(STATUS_DISCONNECTED);
-                    SafeUtils.SafeCallback(mPrefix + ": HandleOnPeerDisconnected call OnPeerDisconnectedEvents code " + code + " notify reconnecting", () =>
+                    SafeUtils.SafeCallback(mPrefix + ": HandleOnPeerDisconnected call OnPeerDisconnectedEvents code " + code, () =>
                     {
                         OnPeerDisconnectedEvents(code);
                     });
+                    needWakeup = true;
+                }
+                else
+                {
+                    Logger.warn(TAG, mPrefix + ": HandleOnPeerDisconnected illegal, disconnected already " + " code " + code);
+                }
+                if(needWakeup)
+                {
                     try
                     {
                         Monitor.Enter(mLock);
@@ -339,10 +359,6 @@ namespace Oceanus.Core.Network
                     {
                         Monitor.Exit(mLock);
                     }
-                }
-                else
-                {
-                    Logger.warn(TAG, mPrefix + ": HandleOnPeerDisconnected illegal, disconnected already " + " code " + code);
                 }
             } else
             {

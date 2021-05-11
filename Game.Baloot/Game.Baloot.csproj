@@ -62,17 +62,17 @@
     <Compile Include="Oceanus\Entity\PlayerGameStatus.cs" />
     <Compile Include="Oceanus\Error\ErrorCodes.cs" />
     <Compile Include="Oceanus\Event\ConnectedEvent.cs" />
+    <Compile Include="Oceanus\Event\ShuttedDownEvent.cs" />
     <Compile Include="Oceanus\Event\DisconnectedEvent.cs" />
     <Compile Include="Oceanus\Event\MatchingResultEvent.cs" />
     <Compile Include="Oceanus\Event\NetworkEvent.cs" />
-    <Compile Include="Oceanus\Lobby\Action\StartMatchingAction.cs" />
     <Compile Include="Oceanus\Lobby\Impl\LobbyServiceImpl.cs" />
     <Compile Include="Oceanus\Lobby\Impl\PlayerGameStatusManagerImpl.cs" />
+    <Compile Include="Oceanus\Lobby\LobbyErrorCodes.cs" />
     <Compile Include="Oceanus\Lobby\LobbyService.cs" />
     <Compile Include="Oceanus\Lobby\PlayerGameStatusManager.cs" />
     <Compile Include="Oceanus\Lobby\Settings.cs" />
     <Compile Include="Oceanus\OceanusFactory.cs" />
-    <Compile Include="Oceanus\Room\Action.cs" />
     <Compile Include="Oceanus\Room\RoomService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

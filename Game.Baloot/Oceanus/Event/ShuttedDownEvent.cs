@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace NetWork.Oceanus
 {
-    public class Action
+    public class ShuttedDownEvent : NetworkEvent
     {
-        public Action(string contentType)
+        public ShuttedDownEvent() : base(TYPE_SHUTTDDOWN)
         {
-            ContentType = contentType;
+
         }
-        public string ContentType
+        public int Code
         {
-            get;
+            get; set;
         }
     }
 }

@@ -10,6 +10,7 @@ namespace NetWork.Oceanus
     {
         public const int TYPE_CONNECTED = 1;
         public const int TYPE_DISCONNECTED = -1;
+        public const int TYPE_SHUTTDDOWN = -100;
         //public const int TYPE_DATA_RECEIVED = 10;
         //public const int TYPE_MESSAGE_RECEIVED = 100;
         public const int TYPE_LOBBY_MATCHING_RESULT = 101;

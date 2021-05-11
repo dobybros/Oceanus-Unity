@@ -20,7 +20,8 @@ namespace Oceanus.Core.Utils
             }
             catch (Exception e)
             {
-                Logger.error(TAG, "SafeCallback {0} invoke failed, {1}", actionName, e.Message);
+                
+                Logger.error(TAG, "SafeCallback {0} invoke failed, {1}, stackTrace {2}", actionName, e.Message, e.StackTrace);
             }
 
         }

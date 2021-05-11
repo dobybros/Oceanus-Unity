@@ -28,6 +28,10 @@ namespace Oceanus.Core.Network
         private System.Timers.Timer mPingTimer;
         private long mServerPingTime;
 
+        public int? lastErrorCode
+        {
+            get; set;
+        }
         private string mPrefix;
 
         internal WebsocketChannel(string prefix)
@@ -148,7 +152,9 @@ namespace Oceanus.Core.Network
 
             if(result != null)
             {
-                if(result.ForId.Equals(IDENTITY_ID))
+                if (result.Code != 1)
+                    lastErrorCode = result.Code;
+                if (result.ForId.Equals(IDENTITY_ID))
                 {
                     if(result.Code == 1)
                     {
@@ -193,6 +199,7 @@ namespace Oceanus.Core.Network
                 case IMConstants.CHANNEL_STATUS_CONNECTED:
                     if (this.mStatus.CompareAndSet(IMConstants.CHANNEL_STATUS_CONNECTING, status))
                     {
+                        lastErrorCode = null;
                         mPingTimer = new System.Timers.Timer
                         {
                             Enabled = true,
@@ -248,7 +255,7 @@ namespace Oceanus.Core.Network
         void ServerDisconnected(object sender, EventArgs args)
         {
             SafeUtils.SafeCallback(mPrefix + ": ServerDisconnected, sender " + sender,
-                            () => ChannelStatusChanged(IMConstants.CHANNEL_STATUS_DISCONNECTED, 8888));
+                            () => ChannelStatusChanged(IMConstants.CHANNEL_STATUS_DISCONNECTED, (int)(lastErrorCode != null ? lastErrorCode : 8888)));
         }
 
         public void RegisterDataDelegate(OnReceivedData onReceivedDataMethod)

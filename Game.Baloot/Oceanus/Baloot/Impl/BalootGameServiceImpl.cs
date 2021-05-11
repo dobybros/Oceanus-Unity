@@ -137,79 +137,10 @@ namespace NetWork.Oceanus.Baloot
                             break;
                     }
                     mIMPeer = builder.Build();
-                    mIMPeer.OnPeerConnectedEvents += () =>
-                    {
-                        //User user = new User()
-                        //{
-                        //    id = "234",
-                        //    name = "dfafd"
-                        //};
-                        //mClient.Send(user, "user", (IMResult result) => {
-                        //    Logger.info("aaa", "result " + result);
-                        //}, 8);
-                        ConnectStatus.Set(OceanusFactory.CONNECT_STATUS_CONNECTED);
-
-                        SafeUtils.SafeCallback("Baloot Connected", () =>
-                        {
-                            NetworkEvent networkEvent = new ConnectedEvent();
-                            OnNetworkEventReceivedEvents(networkEvent);
-                        });
-
-                    };
-                    mIMPeer.OnPeerDisconnectedEvents += (int code) =>
-                    {
-                        ConnectStatus.Set(OceanusFactory.CONNECT_STATUS_DISCONNECTED);
-
-                        SafeUtils.SafeCallback("Baloot Disconnected", () =>
-                        {
-                            NetworkEvent networkEvent = new DisconnectedEvent();
-                            OnNetworkEventReceivedEvents(networkEvent);
-                        });
-                    };
-                    mIMPeer.OnPeerReceivedDataEvents += (IMData data) =>
-                    {
-                        //Logger.info(TAG, "Data received contentType {0} id {1} time {2} content {3}", data.ContentType, data.Id, data.Time, data.GetContent<string>());
-                        SafeUtils.SafeCallback("Baloot data received, type " + data.ContentType, () =>
-                        {
-                            NetworkEvent theNetworkEvent = OceanusFactory.GetInstance().ConvertToNetworkEvent(data);
-                            if (theNetworkEvent != null)
-                            {
-                                switch(theNetworkEvent.Type)
-                                {
-                                    case NetworkEvent.TYPE_BALOOT_ALL_FRAME_DATA:
-                                        mBalootGameManager.InitAllFrameData(((AllFrameDataEvent)theNetworkEvent).frameData);
-                                        break;
-                                    case NetworkEvent.TYPE_BALOOT_UPDATE_FRAME_DATA:
-                                        mBalootGameManager.UpdateFrameData(((UpdateFrameDataEvent)theNetworkEvent).frameData);
-                                        break;
-                                    default:
-                                        OnNetworkEventReceivedEvents(theNetworkEvent);
-                                        break;
-                                }
-                            }
-                            else
-                            {
-                                Logger.error(TAG, "Unknown IMData received, " + data.ContentType + ". Will be ignored");
-                            }
-                        });
-                    };
-                    mIMPeer.OnPeerReceivedMessageEvents += (IMMessage message) =>
-                    {
-                        //Logger.info(TAG, "Message received contentType {0} id {1} time {2} userId {3} groupId {4} content {5}", message.ContentType, message.Id, message.Time, message.UserId, message.GroupId, message.GetContent<string>());
-                        SafeUtils.SafeCallback("Baloot message received, type " + message.ContentType, () =>
-                        {
-                            NetworkEvent theNetworkEvent = OceanusFactory.GetInstance().ConvertToNetworkEvent(message);
-                            if (theNetworkEvent != null)
-                            {
-                                OnNetworkEventReceivedEvents(theNetworkEvent);
-                            }
-                            else
-                            {
-                                Logger.error(TAG, "Unknown IMMessage received, " + message.ContentType + ". Will be ignored");
-                            }
-
-                        });
-                    };
+                    mIMPeer.OnPeerConnectedEvents += ConnectedHandler;
+                    mIMPeer.OnPeerDisconnectedEvents += DisconnectedHandler;
+                    mIMPeer.OnPeerReceivedDataEvents += ReceivedDataHandler;
+                    mIMPeer.OnPeerReceivedMessageEvents += ReceivedMessageHandler;
                     ////接入大厅服务器
                     //mIMPeer.Start(Settings.LoginGatewayUrl, jwtToken);
                     mIMPeer.Start(host, port, jwtToken);
@@ -217,14 +148,109 @@ namespace NetWork.Oceanus.Baloot
                 }
             }
         }
-
         public void Stop()
         {
-            if(mIMPeer != null)
+            if (mIMPeer != null)
             {
-                mIMPeer.Stop();
-                mIMPeer = null;
+                lock (this)
+                {
+                    if (mIMPeer != null)
+                    {
+                        try
+                        {
+                            mIMPeer.OnPeerConnectedEvents -= ConnectedHandler;
+                            mIMPeer.OnPeerDisconnectedEvents -= DisconnectedHandler;
+                            mIMPeer.OnPeerReceivedDataEvents -= ReceivedDataHandler;
+                            mIMPeer.OnPeerReceivedMessageEvents -= ReceivedMessageHandler;
+                            mIMPeer.Stop();
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.error(TAG, "Stop imPeer failed, " + e.Message + " but the stop will be considered successfully");
+                        }
+                        finally
+                        {
+                            mIMPeer = null;
+                            Logger.info(TAG, "BalootGameService stopped");
+                        }
+                    }
+                }
             }
+        }
+        private void ReceivedMessageHandler(IMMessage message)
+        {
+            //Logger.info(TAG, "Message received contentType {0} id {1} time {2} userId {3} groupId {4} content {5}", message.ContentType, message.Id, message.Time, message.UserId, message.GroupId, message.GetContent<string>());
+            SafeUtils.SafeCallback("Baloot message received, type " + message.ContentType, () =>
+            {
+                NetworkEvent theNetworkEvent = OceanusFactory.GetInstance().ConvertToNetworkEvent(message);
+                if (theNetworkEvent != null)
+                {
+                    OnNetworkEventReceivedEvents(theNetworkEvent);
+                }
+                else
+                {
+                    Logger.error(TAG, "Unknown IMMessage received, " + message.ContentType + ". Will be ignored");
+                }
+
+            });
+        }
+
+        private void ReceivedDataHandler(IMData data)
+        {
+            //Logger.info(TAG, "Data received contentType {0} id {1} time {2} content {3}", data.ContentType, data.Id, data.Time, data.GetContent<string>());
+            SafeUtils.SafeCallback("Baloot data received, type " + data.ContentType, () =>
+            {
+                NetworkEvent theNetworkEvent = OceanusFactory.GetInstance().ConvertToNetworkEvent(data);
+                if (theNetworkEvent != null)
+                {
+                    switch (theNetworkEvent.Type)
+                    {
+                        case NetworkEvent.TYPE_BALOOT_ALL_FRAME_DATA:
+                            mBalootGameManager.InitAllFrameData(((AllFrameDataEvent)theNetworkEvent).frameData);
+                            break;
+                        case NetworkEvent.TYPE_BALOOT_UPDATE_FRAME_DATA:
+                            mBalootGameManager.UpdateFrameData(((UpdateFrameDataEvent)theNetworkEvent).frameData);
+                            break;
+                        default:
+                            OnNetworkEventReceivedEvents(theNetworkEvent);
+                            break;
+                    }
+                }
+                else
+                {
+                    Logger.error(TAG, "Unknown IMData received, " + data.ContentType + ". Will be ignored");
+                }
+            });
+        }
+
+        private void DisconnectedHandler(int code)
+        {
+            ConnectStatus.Set(OceanusFactory.CONNECT_STATUS_DISCONNECTED);
+
+            SafeUtils.SafeCallback("Baloot Disconnected", () =>
+            {
+                NetworkEvent networkEvent = new DisconnectedEvent();
+                OnNetworkEventReceivedEvents(networkEvent);
+            });
+        }
+
+        private void ConnectedHandler()
+        {
+            //User user = new User()
+            //{
+            //    id = "234",
+            //    name = "dfafd"
+            //};
+            //mClient.Send(user, "user", (IMResult result) => {
+            //    Logger.info("aaa", "result " + result);
+            //}, 8);
+            ConnectStatus.Set(OceanusFactory.CONNECT_STATUS_CONNECTED);
+
+            SafeUtils.SafeCallback("Baloot Connected", () =>
+            {
+                NetworkEvent networkEvent = new ConnectedEvent();
+                OnNetworkEventReceivedEvents(networkEvent);
+            });
         }
 
         private void callActionCheck()

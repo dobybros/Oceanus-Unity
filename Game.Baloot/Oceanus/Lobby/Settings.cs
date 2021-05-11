@@ -8,7 +8,7 @@ namespace NetWork.Oceanus
 {
     public class Settings
     {
-        public static readonly string Host = "https://aplomb.acucom.net";
+        public static string Host = "https://aplomb.acucom.net";
         public static readonly string LoginUrl = Host + "/rest/goldcentral/login";
         public static readonly string LoginGatewayUrl = Host + "/rest/goldcentral/gateway/login";
     }

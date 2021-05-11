@@ -21,7 +21,8 @@ namespace Oceanus.Test
 
         public static void run()
         {
-            string deviceId = "aplomb's android deviceId";
+            bool matchingOnce = false;
+            string deviceId = "aplomb's android deviceId2";
             LobbyService lobbyService = OceanusFactory.GetInstance().GetLobbyService();
             lobbyService.LoginGuest(deviceId, "Huawei", "android 4.4", "China Unicom 5G", (NetworkResult<LoginResult> result) =>
             {
@@ -32,27 +33,43 @@ namespace Oceanus.Test
                     lobbyService.Start(loginResult.player.userId, deviceId, OceanusFactory.TERMINAL_ANDROID, loginResult.jwtToken);
                     lobbyService.OnNetworkEventReceivedEvents += (NetworkEvent networkEvent) =>
                     {
-                        Logger.info("Test", "networkEvent " + networkEvent.Type + " content " + networkEvent);
                         switch (networkEvent.Type)
                         {
                             case NetworkEvent.TYPE_CONNECTED:
-                                lobbyService.StartMatching("gwgamebaloot", "group1", (IMResult result1) =>
+                                Logger.info("Test", "networkEvent TYPE_CONNECTED content " + networkEvent);
+                                if(!matchingOnce)
                                 {
-                                    if (result1.Code == 1)
+                                    matchingOnce = true;
+                                    lobbyService.StartMatching("gwgamebaloot", "group1", (IMResult result1) =>
                                     {
-
-                                    }
-                                    Logger.info("Test", "StartMatching result " + JsonMapper.ToJson(result1));
-                                });
+                                        switch (result1.Code)
+                                        {
+                                            case 1:
+                                                break;
+                                            case LobbyErrorCodes.ERROR_START_MATCHING_BUT_PLAYER_IN_MATCHING:
+                                                lobbyService.CancelMatching((IMResult result2) =>
+                                                {
+                                                    Logger.info("Test", "Cancel matching result code " + result2.Code);
+                                                });
+                                                break;
+                                        }
+                                        Logger.info("Test", "StartMatching result " + JsonMapper.ToJson(result1));
+                                    });
+                                }
+                                
                                 break;
                             case NetworkEvent.TYPE_DISCONNECTED:
+                                Logger.info("Test", "networkEvent TYPE_DISCONNECTED content " + networkEvent);
+                                break;
+                            case NetworkEvent.TYPE_SHUTTDDOWN:
+                                Logger.info("Test", "networkEvent TYPE_SHUTTDDOWN content " + networkEvent);
                                 break;
                             case NetworkEvent.TYPE_LOBBY_MATCHING_RESULT:
+                                Logger.info("Test", "networkEvent TYPE_LOBBY_MATCHING_RESULT content " + networkEvent);
                                 MatchingResultEvent matchingResultEvent = (MatchingResultEvent)networkEvent;
                                 //messageReceivedEvent.Message.GetContent<>();
-                                Logger.info("Test", "matchingResultEvent " + matchingResultEvent);
 
-                                BalootGameService balootGameService = OceanusFactory.GetInstance().GetBalootGameService();
+                                BalootGameService balootGameService = OceanusFactory.GetInstance().CreateBalootGameService();
 
                                 balootGameService.Start(loginResult.player.userId, deviceId, OceanusFactory.TERMINAL_ANDROID, matchingResultEvent.host, matchingResultEvent.port, matchingResultEvent.token);
                                 balootGameService.OnNetworkEventReceivedEvents += (NetworkEvent NetworkEvent) =>
@@ -60,9 +77,13 @@ namespace Oceanus.Test
                                     switch (networkEvent.Type)
                                     {
                                         case NetworkEvent.TYPE_CONNECTED:
-
+                                            Logger.info("Test", "balootGameService connected");
                                             break;
                                         case NetworkEvent.TYPE_DISCONNECTED:
+                                            Logger.info("Test", "balootGameService disconnected");
+                                            break;
+                                        case NetworkEvent.TYPE_SHUTTDDOWN:
+                                            Logger.info("Test", "balootGameService shutted down");
                                             break;
 
                                     };

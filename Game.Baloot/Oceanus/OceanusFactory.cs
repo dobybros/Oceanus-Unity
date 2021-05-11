@@ -42,7 +42,17 @@ namespace NetWork.Oceanus
         public const int TERMINAL_ANDROID = 100;
         public const int TERMINAL_IOS = 110;
 
+        /// <summary>
+        /// 断连之后会自动重连
+        /// </summary>
         public const int CONNECT_STATUS_DISCONNECTED = -1;
+        /// <summary>
+        /// 断连之后， 不会在自动重连
+        /// </summary>
+        public const int CONNECT_STATUS_SHUTTEDDOWN = -100;
+        /// <summary>
+        /// 已经连接上了
+        /// </summary>
         public const int CONNECT_STATUS_CONNECTED = 1;
         private RoomService mRoomService;
         private LobbyService mLobbyService;
@@ -83,19 +93,6 @@ namespace NetWork.Oceanus
             }
             return null;
         }
-        public Type GetTypeOfDataContentType(string contentType)
-        {
-            switch(contentType) {
-                case "":
-                    break;
-            }
-            return null;
-        }
-
-        public Type GetTypeOfActivityContent(string activityId)
-        {
-            return null;
-        }
 
         public LobbyService GetLobbyService()
         {
@@ -114,7 +111,7 @@ namespace NetWork.Oceanus
             return mLobbyService;
         }
 
-        public BalootGameService GetBalootGameService()
+        public BalootGameService CreateBalootGameService()
         {
             return CreateRoomService<BalootGameServiceImpl>();
         }
