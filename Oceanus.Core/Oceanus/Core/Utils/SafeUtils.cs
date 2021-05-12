@@ -13,7 +13,7 @@ namespace Oceanus.Core.Utils
         private static readonly string TAG = typeof(SafeUtils).Name;
         public static void SafeCallback(string actionName, Action action)
         {
-            Logger.info(TAG, "SafeCallback " + actionName);
+            OceanusLogger.info(TAG, "SafeCallback " + actionName);
             try
             {
                 action.Invoke();
@@ -21,7 +21,7 @@ namespace Oceanus.Core.Utils
             catch (Exception e)
             {
                 
-                Logger.error(TAG, "SafeCallback {0} invoke failed, {1}, stackTrace {2}", actionName, e.Message, e.StackTrace);
+                OceanusLogger.error(TAG, "SafeCallback {0} invoke failed, {1}, stackTrace {2}", actionName, e.Message, e.StackTrace);
             }
 
         }
@@ -51,7 +51,7 @@ namespace Oceanus.Core.Utils
             }
             catch (OperationCanceledException e)
             {
-                Logger.info(TAG, "WaitTimeout secondsd " + seconds + " is canceled " + e.Message);
+                OceanusLogger.info(TAG, "WaitTimeout secondsd " + seconds + " is canceled " + e.Message);
                 return false;
             }
             SafeUtils.SafeCallback("WaitTimeout seconds " + seconds + " executed", () =>

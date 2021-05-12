@@ -32,15 +32,15 @@ namespace Tests
             mClient.OnPeerDisconnectedEvents += (int code) =>
             {
                 assertAsyncHandler.failed("Disconnected");
-                Logger.info("aaa", "disconnected");
+                OceanusLogger.info("aaa", "disconnected");
             };
             mClient.OnPeerReceivedDataEvents += (IMData data) =>
             {
-                Logger.info("aaa", "Data received contentType {0} id {1} time {2} content {3}", data.ContentType, data.Id, data.Time, data.GetContent<string>());
+                OceanusLogger.info("aaa", "Data received contentType {0} id {1} time {2} content {3}", data.ContentType, data.Id, data.Time, data.GetContent<string>());
             };
             mClient.OnPeerReceivedMessageEvents += (IMMessage message) =>
             {
-                Logger.info("aaa", "Message received contentType {0} id {1} time {2} userId {3} groupId {4} content {5}", message.ContentType, message.Id, message.Time, message.UserId, message.GroupId, message.GetContent<string>());
+                OceanusLogger.info("aaa", "Message received contentType {0} id {1} time {2} userId {3} groupId {4} content {5}", message.ContentType, message.Id, message.Time, message.UserId, message.GroupId, message.GetContent<string>());
             };
             //接入房间服务器
             //mClient.Start("aplomb.acucom.net", 2443,
@@ -67,15 +67,15 @@ namespace Tests
             mClient.OnPeerDisconnectedEvents += (int code) =>
             {
                 assertAsyncHandler.failed("Disconnected");
-                Logger.info("aaa", "disconnected");
+                OceanusLogger.info("aaa", "disconnected");
             };
             mClient.OnPeerReceivedDataEvents += (IMData data) =>
             {
-                Logger.info("aaa", "Data received contentType {0} id {1} time {2} content {3}", data.ContentType, data.Id, data.Time, data.GetContent<string>());
+                OceanusLogger.info("aaa", "Data received contentType {0} id {1} time {2} content {3}", data.ContentType, data.Id, data.Time, data.GetContent<string>());
             };
             mClient.OnPeerReceivedMessageEvents += (IMMessage message) =>
             {
-                Logger.info("aaa", "Message received contentType {0} id {1} time {2} userId {3} groupId {4} content {5}", message.ContentType, message.Id, message.Time, message.UserId, message.GroupId, message.GetContent<string>());
+                OceanusLogger.info("aaa", "Message received contentType {0} id {1} time {2} userId {3} groupId {4} content {5}", message.ContentType, message.Id, message.Time, message.UserId, message.GroupId, message.GetContent<string>());
             };
             //接入房间服务器
             //mClient.Start("aplomb.acucom.net", 2443,

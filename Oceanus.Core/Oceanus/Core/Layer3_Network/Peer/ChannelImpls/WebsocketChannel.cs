@@ -79,7 +79,7 @@ namespace Oceanus.Core.Network
                     mWatsonWsClient.ServerConnected += ServerConnected;
                     mWatsonWsClient.ServerDisconnected += ServerDisconnected;
                     mWatsonWsClient.MessageReceived += MessageReceived;
-                    Logger.info(TAG, mPrefix + ": StartWithTimeoutAsync {0} seconds", IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS);
+                    OceanusLogger.info(TAG, mPrefix + ": StartWithTimeoutAsync {0} seconds", IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS);
                     mWatsonWsClient.StartWithTimeoutAsync(IMConstants.CONFIG_CHANNEL_ESTABLISH_TIMEOUT_SECONDS).Wait();
 
                     if(!mWatsonWsClient.Connected)
@@ -90,7 +90,7 @@ namespace Oceanus.Core.Network
             }
             else
             {
-                Logger.error(TAG, mPrefix + ": Connect failed, because illegal status, expecting " + IMConstants.CHANNEL_STATUS_INIT + " but " + mStatus.Get());
+                OceanusLogger.error(TAG, mPrefix + ": Connect failed, because illegal status, expecting " + IMConstants.CHANNEL_STATUS_INIT + " but " + mStatus.Get());
             }
         }
         void MessageReceived(object sender, MessageReceivedEventArgs args)
@@ -115,7 +115,7 @@ namespace Oceanus.Core.Network
                         HandleOutgoingMessage(args.Data.Skip(1).ToArray());
                         break;
                     default:
-                        Logger.error(TAG, mPrefix + ": Unexpected data received, type {0} length {1}. Ignored...", type, args.Data.Length);
+                        OceanusLogger.error(TAG, mPrefix + ": Unexpected data received, type {0} length {1}. Ignored...", type, args.Data.Length);
                         break;
                 }
             }
@@ -153,7 +153,11 @@ namespace Oceanus.Core.Network
             if(result != null)
             {
                 if (result.Code != 1)
+                {
                     lastErrorCode = result.Code;
+                    OceanusLogger.info(TAG, mPrefix +": lastErrorCode " + lastErrorCode);
+                }
+                    
                 if (result.ForId.Equals(IDENTITY_ID))
                 {
                     if(result.Code == 1)
@@ -193,7 +197,7 @@ namespace Oceanus.Core.Network
                     }
                     else
                     {
-                        Logger.error(TAG, mPrefix + ": ChannelStatusChanged(connecting) status " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
+                        OceanusLogger.error(TAG, mPrefix + ": ChannelStatusChanged(connecting) status " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
                     }
                     break;
                 case IMConstants.CHANNEL_STATUS_CONNECTED:
@@ -214,7 +218,7 @@ namespace Oceanus.Core.Network
                             copiedOnChannelStatusMethod(this, status, code);
                     } else
                     {
-                        Logger.error(TAG, mPrefix + ": ChannelStatusChanged status(connected) " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
+                        OceanusLogger.error(TAG, mPrefix + ": ChannelStatusChanged status(connected) " + status + " failed, because of status illegal, expecting " + IMConstants.CHANNEL_STATUS_CONNECTING + " but " + this.mStatus.Get());
                     }
                     break;
                 case IMConstants.CHANNEL_STATUS_DISCONNECTED:
@@ -244,10 +248,10 @@ namespace Oceanus.Core.Network
             {
                 if(t.Result)
                 {
-                    Logger.info(TAG, mPrefix + ": Send identity successfully");
+                    OceanusLogger.info(TAG, mPrefix + ": Send identity successfully");
                 } else
                 {
-                    Logger.error(TAG, mPrefix + ": Send identity failed");
+                    OceanusLogger.error(TAG, mPrefix + ": Send identity failed");
                 }
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
         }
@@ -273,7 +277,7 @@ namespace Oceanus.Core.Network
             long time = SafeUtils.CurrentTimeMillis() - mServerPingTime;
             if (time > IMConstants.CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS)
             {
-                Logger.info(TAG, mPrefix + ": Ping timeout time {0} timeout {1}, channel will be closed...", time, IMConstants.CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS);
+                OceanusLogger.info(TAG, mPrefix + ": Ping timeout time {0} timeout {1}, channel will be closed...", time, IMConstants.CONFIG_CHANNEL_PING_TIMEOUT_MILISECONDS);
                 Close();
             } else
             {
@@ -295,7 +299,7 @@ namespace Oceanus.Core.Network
                     }
                     else
                     {
-                        Logger.error(TAG, mPrefix + ": Send ping failed");
+                        OceanusLogger.error(TAG, mPrefix + ": Send ping failed");
                     }
                 }, TaskContinuationOptions.OnlyOnRanToCompletion);
             }
@@ -320,7 +324,7 @@ namespace Oceanus.Core.Network
                 }
                 else
                 {
-                    throw new CoreException(ErrorCodes.ERROR_MESSAGE_START_SENDING_ALREADY, Logger.Format(mPrefix + ": Message {0} start sending already, contentType {1} content {2}", resultAction.Id, resultAction.ContentType, resultAction.Content));
+                    throw new CoreException(ErrorCodes.ERROR_MESSAGE_START_SENDING_ALREADY, OceanusLogger.Format(mPrefix + ": Message {0} start sending already, contentType {1} content {2}", resultAction.Id, resultAction.ContentType, resultAction.Content));
                 }
             }
             catch (Exception e)
@@ -378,11 +382,11 @@ namespace Oceanus.Core.Network
             {
                 if (t.Result)
                 {
-                    Logger.info(TAG, mPrefix + ": Send incomingDataPackBytes successfully type " + incomingData.ContentType + " content " + incomingData.ContentStr);
+                    OceanusLogger.info(TAG, mPrefix + ": Send incomingDataPackBytes successfully type " + incomingData.ContentType + " content " + incomingData.ContentStr);
                 }
                 else
                 {
-                    Logger.error(TAG, mPrefix + ": Send incomingDataPackBytes failed type " + incomingData.ContentType + " content " + incomingData.ContentStr);
+                    OceanusLogger.error(TAG, mPrefix + ": Send incomingDataPackBytes failed type " + incomingData.ContentType + " content " + incomingData.ContentStr);
                 }
             }, TaskContinuationOptions.OnlyOnRanToCompletion);
         }

@@ -83,7 +83,7 @@
     <Compile Include="Oceanus\Core\Layer3_Network\Peer\IMPeer.cs" />
     <Compile Include="Oceanus\Core\Utils\AtomicInt.cs" />
     <Compile Include="Oceanus\Core\Utils\SafeUtils.cs" />
-    <Compile Include="Oceanus\Core\Utils\Logger.cs" />
+    <Compile Include="Oceanus\Core\Utils\OceanusLogger.cs" />
     <Compile Include="Oceanus\Core\Utils\NGuava\AttributeHandlerFinder.cs" />
     <Compile Include="Oceanus\Core\Utils\NGuava\EventBus.cs" />
     <Compile Include="Oceanus\Core\Utils\NGuava\EventHandler.cs" />

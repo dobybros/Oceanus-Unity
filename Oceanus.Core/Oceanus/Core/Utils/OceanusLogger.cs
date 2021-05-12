@@ -14,7 +14,7 @@ namespace Oceanus.Core.Utils
         void error(string message);
         void fatal(string message);
     }
-    public class Logger
+    public class OceanusLogger
     {
         public static LoggerListener LoggerListener
         {
@@ -34,7 +34,7 @@ namespace Oceanus.Core.Utils
         }
         private static string PrintStringFormat(string type, string tag, string message, params object[] args)
         {
-            message = Logger.Format(message, args);
+            message = OceanusLogger.Format(message, args);
             return string.Format("{0}#Thread {1}#{2:yyyy/MM/dd HH:mm:ss.fff}#{3}:: {4}", type, Thread.CurrentThread.ManagedThreadId, DateTime.Now, tag, message);
         }
 
@@ -42,10 +42,10 @@ namespace Oceanus.Core.Utils
         {
             if(LoggerListener == null)
             {
-                Console.WriteLine(Logger.PrintStringFormat("ERROR", tag, message, args)); 
+                Console.WriteLine(OceanusLogger.PrintStringFormat("ERROR", tag, message, args)); 
             } else
             {
-                LoggerListener.error(Logger.PrintStringFormat("ERROR", tag, message, args));
+                LoggerListener.error(OceanusLogger.PrintStringFormat("ERROR", tag, message, args));
             }
         }
 
@@ -53,11 +53,11 @@ namespace Oceanus.Core.Utils
         {
             if (LoggerListener == null)
             {
-                Console.WriteLine(Logger.PrintStringFormat("FATAL", tag, message, args));
+                Console.WriteLine(OceanusLogger.PrintStringFormat("FATAL", tag, message, args));
             }
             else
             {
-                LoggerListener.error(Logger.PrintStringFormat("FATAL", tag, message, args));
+                LoggerListener.error(OceanusLogger.PrintStringFormat("FATAL", tag, message, args));
             }
         }
 
@@ -65,11 +65,11 @@ namespace Oceanus.Core.Utils
         {
             if (LoggerListener == null)
             {
-                Console.WriteLine(Logger.PrintStringFormat("INFO", tag, message, args));
+                Console.WriteLine(OceanusLogger.PrintStringFormat("INFO", tag, message, args));
             }
             else
             {
-                LoggerListener.error(Logger.PrintStringFormat("INFO", tag, message, args));
+                LoggerListener.info(OceanusLogger.PrintStringFormat("INFO", tag, message, args));
             }
         }
 
@@ -77,11 +77,11 @@ namespace Oceanus.Core.Utils
         {
             if (LoggerListener == null)
             {
-                Console.WriteLine(Logger.PrintStringFormat("WARN", tag, message, args));
+                Console.WriteLine(OceanusLogger.PrintStringFormat("WARN", tag, message, args));
             }
             else
             {
-                LoggerListener.error(Logger.PrintStringFormat("WARN", tag, message, args));
+                LoggerListener.warn(OceanusLogger.PrintStringFormat("WARN", tag, message, args));
             }
         }
     }

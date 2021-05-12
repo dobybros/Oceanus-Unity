@@ -88,10 +88,10 @@ namespace Oceanus.Core.Network
                     retryCounter.Set(-1);
                     try
                     {
-                        Logger.info(TAG, mPrefix + ": Connected, will wait {0} seconds to check again", IMConstants.CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS);
+                        OceanusLogger.info(TAG, mPrefix + ": Connected, will wait {0} seconds to check again", IMConstants.CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS);
                         Monitor.Enter(mLock);
                         Monitor.Wait(mLock, TimeSpan.FromSeconds(IMConstants.CONFIG_CHANNEL_CONNECTED_MAX_WAIT_SECNODS));
-                        Logger.info(TAG, mPrefix + ": Connected, wakeup to check again");
+                        OceanusLogger.info(TAG, mPrefix + ": Connected, wakeup to check again");
                     }
                     finally
                     {
@@ -105,7 +105,7 @@ namespace Oceanus.Core.Network
                     retryCounter.Increment();
                     Connect();
 
-                    Logger.info(TAG, mPrefix + ": Connected, waiting identity result {0} seconds, retryCounter {1}", IMConstants.CONFIG_CHANNEL_IDENTITY_RESULT_TIMEOUT_SECNODS, retryCounter.Get());
+                    OceanusLogger.info(TAG, mPrefix + ": Connected, waiting identity result {0} seconds, retryCounter {1}", IMConstants.CONFIG_CHANNEL_IDENTITY_RESULT_TIMEOUT_SECNODS, retryCounter.Get());
                     try
                     {
                         Monitor.Enter(mLock);
@@ -118,13 +118,13 @@ namespace Oceanus.Core.Network
                 }
                 catch (Exception e)
                 {
-                    Logger.error(TAG, mPrefix + ": Connect failed, " + e.Message + " will retry " + retryCounter.Get());
-                    Logger.info(TAG, mPrefix + ": Sleep {0} seconds...", IMConstants.CONFIG_CHANNEL_ERROR_RETRY_SECNODS);
+                    OceanusLogger.error(TAG, mPrefix + ": Connect failed, " + e.Message + " will retry " + retryCounter.Get());
+                    OceanusLogger.info(TAG, mPrefix + ": Sleep {0} seconds...", IMConstants.CONFIG_CHANNEL_ERROR_RETRY_SECNODS);
                     Thread.Sleep(TimeSpan.FromSeconds(IMConstants.CONFIG_CHANNEL_ERROR_RETRY_SECNODS)); 
-                    Logger.info(TAG, mPrefix + ": Sleep is finished");
+                    OceanusLogger.info(TAG, mPrefix + ": Sleep is finished");
                 }
             }
-            Logger.info(TAG, "IMPeer {0} is destroyed", mPrefix);
+            OceanusLogger.info(TAG, "IMPeer {0} is destroyed", mPrefix);
         }
 
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -140,7 +140,7 @@ namespace Oceanus.Core.Network
             }
             else
             {
-                Logger.warn(TAG, mPrefix + ": IMClient start on loginUrl {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), loginUrl);
+                OceanusLogger.warn(TAG, mPrefix + ": IMClient start on loginUrl {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), loginUrl);
             }
         }
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -157,7 +157,7 @@ namespace Oceanus.Core.Network
             }
             else
             {
-                Logger.warn(TAG, mPrefix + ": IMClient start on host {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), host);
+                OceanusLogger.warn(TAG, mPrefix + ": IMClient start on host {2} illegally, expecting status {0} but actual is {1}", STATUS_NONE, mStatus.Get(), host);
             }
             
         }
@@ -183,7 +183,7 @@ namespace Oceanus.Core.Network
             }
             else
             {
-                Logger.error(TAG, mPrefix + ": Connect failed because parameters are illegal, mLoginUrl {0} mHost {1}, mPort {2} mToken {3}", mLoginUrl, mHost, mPort, mToken);
+                OceanusLogger.error(TAG, mPrefix + ": Connect failed because parameters are illegal, mLoginUrl {0} mHost {1}, mPort {2} mToken {3}", mLoginUrl, mHost, mPort, mToken);
             }
         }
 
@@ -233,7 +233,7 @@ namespace Oceanus.Core.Network
                     {
                         throw new CoreException(responseData.code, mPrefix + ": Server error, code " + responseData.code + " message " + responseData.message);
                     }
-                    Logger.info(TAG, mPrefix + ": LoginToConnectServer on url {0}, host {1}, port {2}, token {3}", loginUrl, responseData.data.host, responseData.data.port, responseData.data.token);
+                    OceanusLogger.info(TAG, mPrefix + ": LoginToConnectServer on url {0}, host {1}, port {2}, token {3}", loginUrl, responseData.data.host, responseData.data.port, responseData.data.token);
                     ConnectToServer(responseData.data.host, responseData.data.port, responseData.data.token);
                 }
             }
@@ -245,7 +245,7 @@ namespace Oceanus.Core.Network
         }
         private void ConnectToServer(string host, int port, string token)
         {
-            Logger.info(TAG, mPrefix + ": ConnectToServer host " + host + " port " + port);
+            OceanusLogger.info(TAG, mPrefix + ": ConnectToServer host " + host + " port " + port);
             if (mChannel != null)
             {
                 mChannel.Close();
@@ -312,11 +312,11 @@ namespace Oceanus.Core.Network
                 }
                 else
                 {
-                    Logger.warn(TAG, mPrefix + ": HandleOnPeerConnected illegal, already connected");
+                    OceanusLogger.warn(TAG, mPrefix + ": HandleOnPeerConnected illegal, already connected");
                 }
             } else
             {
-                Logger.warn(TAG, mPrefix + ": Old channel HandleOnPeerConnected " + chanel + " new " + mChannel);
+                OceanusLogger.warn(TAG, mPrefix + ": Old channel HandleOnPeerConnected " + chanel + " new " + mChannel);
             }
         }
         [MethodImpl(MethodImplOptions.Synchronized)]
@@ -346,7 +346,7 @@ namespace Oceanus.Core.Network
                 }
                 else
                 {
-                    Logger.warn(TAG, mPrefix + ": HandleOnPeerDisconnected illegal, disconnected already " + " code " + code);
+                    OceanusLogger.warn(TAG, mPrefix + ": HandleOnPeerDisconnected illegal, disconnected already " + " code " + code);
                 }
                 if(needWakeup)
                 {
@@ -362,7 +362,7 @@ namespace Oceanus.Core.Network
                 }
             } else
             {
-                Logger.warn(TAG, mPrefix + ": Old channel HandleOnPeerDisconnected " + channel + " new " + mChannel + " code " + code);
+                OceanusLogger.warn(TAG, mPrefix + ": Old channel HandleOnPeerDisconnected " + channel + " new " + mChannel + " code " + code);
             }
             
            
